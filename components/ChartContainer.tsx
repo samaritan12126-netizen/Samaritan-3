@@ -9,9 +9,6 @@ import {
     SeriesMarker, 
     Time, 
     IPriceLine,
-    CandlestickSeries,
-    AreaSeries,
-    HistogramSeries
 } from 'lightweight-charts';
 import { CandleData, Timeframe, CurrencyPair, ScanResult, ChartZone, ChartLine, Trade } from '../types';
 import { Calendar, Maximize, Loader2, Camera, RotateCcw } from 'lucide-react';
