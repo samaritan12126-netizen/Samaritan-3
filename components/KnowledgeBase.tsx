@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   BrainCircuit, Trash2, Search, FileImage, Database, Folder, Layers,
   Edit2, Check, X, Upload, Play, Clock, ToggleLeft, ToggleRight, History, 
-  CloudUpload, Share2, ShieldCheck, ArrowLeft, Network, ShieldAlert, QrCode, Scan, Merge, ThumbsUp, ThumbsDown, MessageSquare, Zap, Activity
+  UploadCloud, Share2, ShieldCheck, ArrowLeft, Network, ShieldAlert, QrCode, Scan, Merge, ThumbsUp, ThumbsDown, MessageSquare, Zap, Activity
 } from 'lucide-react';
 import { NeuralDB, Concept, Nugget, Strategy, Timeframe, View, EvolutionLog } from '../types';
 import { storage } from '../services/storage';
