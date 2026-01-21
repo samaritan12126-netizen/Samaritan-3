@@ -1,0 +1,73 @@
+
+name: Build Samaritan APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  build:
+    name: Compile Android APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Web App
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+        run: npm run build
+
+      - name: Initialize Capacitor Android
+        # Creates the android folder if it doesn't exist
+        run: |
+          npx cap add android
+          npx cap sync
+
+      - name: Inject Android Permissions
+        # Inserts permissions into the manifest
+        run: |
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_PATH" ]; then
+            echo "Injecting Permissions into $MANIFEST_PATH..."
+            sed -i 's/<application/<uses-permission android:name="android.permission.RECORD_AUDIO" \/>\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" \/>\n    <uses-permission android:name="android.permission.WAKE_LOCK" \/>\n    <application/g' $MANIFEST_PATH
+            cat $MANIFEST_PATH
+          else
+            echo "Error: Android Manifest not found at $MANIFEST_PATH"
+            exit 1
+          fi
+
+      - name: Configure Android SDK
+        # Critical fix: Generate local.properties and accept licenses
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Build APK (Gradle)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Samaritan-Debug-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
