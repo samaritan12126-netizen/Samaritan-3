@@ -1,0 +1,14 @@
+
+{
+  "appId": "com.samaritan.cortex",
+  "appName": "The Samaritan",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

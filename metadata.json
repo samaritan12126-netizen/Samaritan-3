@@ -1,0 +1,7 @@
+{
+  "name": "The Samaritan",
+  "description": "An advanced AI chatbot featuring deep reasoning capabilities using Google's Gemini 3 Pro model.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

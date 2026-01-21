@@ -1,0 +1,60 @@
+
+/// THE SAMARITAN // FILE MANIFEST
+/// VERIFICATION REQUIRED
+
+[CORE]
+- index.html
+- index.tsx
+- App.tsx
+- types.ts
+- vite.config.ts
+- tsconfig.json
+- package.json
+- tailwind.config.js (Embedded in index.html)
+
+[COMPONENTS]
+- components/LiveTerminal.tsx
+- components/ChartContainer.tsx
+- components/InputArea.tsx
+- components/MessageBubble.tsx
+- components/ThinkingIndicator.tsx
+- components/SentinelPanel.tsx
+- components/MosaicView.tsx
+- components/AlertsView.tsx
+- components/BacktestView.tsx
+- components/NeuralEngine.tsx
+- components/KnowledgeBase.tsx
+- components/JournalView.tsx
+- components/SystemCoreView.tsx
+- components/CommandPalette.tsx
+- components/BootSequence.tsx
+- components/ManualModal.tsx
+- components/MentionsInput.tsx
+- components/VoiceVisualizer.tsx
+- components/NeuralGraph.tsx
+- components/BackupModal.tsx
+- components/CustomUI.tsx
+
+[SERVICES]
+- services/geminiService.ts (Hydra Neural Bridge)
+- services/marketData.ts (Data Feed Aggregator)
+- services/storage.ts (IndexedDB Adapter)
+- services/backtestEngine.ts (Simulation Core)
+- services/indicators.ts (Math Utils)
+- services/execution.ts (Order Management)
+- services/archivist.ts (Backup/Restore)
+- services/audio.ts (Sound Engine)
+- services/optimizer.worker.ts (Multithreading)
+
+[HOOKS]
+- hooks/useSentinel.ts
+- hooks/useLiveSession.ts
+- hooks/useWakeLock.ts
+
+[ASSETS]
+- public/manifest.json
+- service-worker.js
+
+[DOCS]
+- README.md
+- FILE_MANIFEST.txt
