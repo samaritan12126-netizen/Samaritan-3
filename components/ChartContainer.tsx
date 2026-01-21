@@ -360,7 +360,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
     
     // v5 COMPATIBILITY: Use addSeries(Type, options) instead of addTypeSeries()
     if (type === 'AREA') {
-        const comparisonSeries = chart.addSeries(AreaSeries, { 
+        const comparisonSeries = chart.addAreaSeries ({ 
             lineColor: '#8b5cf6', 
             topColor: 'rgba(139, 92, 246, 0.2)', 
             bottomColor: 'rgba(139, 92, 246, 0.0)',
@@ -369,7 +369,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
         });
         comparisonSeriesRef.current = comparisonSeries;
 
-        series = chart.addSeries(AreaSeries, { 
+        series = chart.addAreaSeries, ({ 
             lineColor: '#06b6d4', 
             topColor: 'rgba(6, 182, 212, 0.5)', 
             bottomColor: 'rgba(6, 182, 212, 0.0)',
@@ -377,11 +377,11 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
             crosshairMarkerVisible: true
         });
     } else {
-        const killzoneSeries = chart.addSeries(HistogramSeries, { priceScaleId: 'killzone', priceFormat: { type: 'volume' } });
+        const killzoneSeries = chart.addHistogramSeries ({ priceScaleId: 'killzone', priceFormat: { type: 'volume' } });
         chart.priceScale('killzone').applyOptions({ scaleMargins: { top: 0, bottom: 0 }, visible: false });
         killzoneSeriesRef.current = killzoneSeries;
         
-        series = chart.addSeries(CandlestickSeries, { upColor: '#00ff9d', downColor: '#ff1e56', borderVisible: false, wickUpColor: '#00ff9d', wickDownColor: '#ff1e56', priceFormat: { type: 'price', precision: precision, minMove: minMove } });
+        series = chart.addCandlestickSeries ({ upColor: '#00ff9d', downColor: '#ff1e56', borderVisible: false, wickUpColor: '#00ff9d', wickDownColor: '#ff1e56', priceFormat: { type: 'price', precision: precision, minMove: minMove } });
     }
 
     chartRef.current = chart;
