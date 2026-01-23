@@ -8,7 +8,7 @@ import {
     MouseEventParams, 
     SeriesMarker, 
     Time, 
-    IPriceLine,
+    IPriceLine
 } from 'lightweight-charts';
 import { CandleData, Timeframe, CurrencyPair, ScanResult, ChartZone, ChartLine, Trade } from '../types';
 import { Calendar, Maximize, Loader2, Camera, RotateCcw } from 'lucide-react';
@@ -274,458 +274,427 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
 
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
-            ctx.setLineDash(line.type === 'trend' ? [5, 5] : []); 
+            ctx.setLineDash(line.type === 'trend' ? [5, 5] : []);
             ctx.stroke();
-            ctx.setLineDash([]); 
 
-            if (drawX1 > 0 && drawX1 < canvas.width) {
-               ctx.fillStyle = color;
-               ctx.font = '10px JetBrains Mono';
-               ctx.fillText(line.type.toUpperCase(), drawX1, y1 - 5);
+            if (line.label && x1 !== null) {
+                ctx.fillStyle = color;
+                ctx.font = '9px JetBrains Mono';
+                ctx.fillText(line.label, x1 + 4, y1 - 4);
             }
         });
     }
   };
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    const isEquity = type === 'AREA';
+    if (!chartContainerRef.current || !shouldRender) return;
 
     const chart = createChart(chartContainerRef.current, {
-      layout: { background: { type: ColorType.Solid, color: 'transparent' }, textColor: isEquity ? '#52525b' : '#71717a', fontFamily: "JetBrains Mono, monospace" },
-      grid: { 
-         vertLines: { color: 'rgba(255, 255, 255, 0.03)', style: 1, visible: !isEquity }, 
-         horzLines: { color: 'rgba(255, 255, 255, 0.03)', style: 1, visible: !isEquity } 
-      },
       width: chartContainerRef.current.clientWidth,
       height: chartContainerRef.current.clientHeight,
-      localization: { 
-          timeFormatter: (time: number) => {
-              try {
-                  return nyTimeFormatter.format(new Date(time * 1000));
-              } catch(e) { return ""; }
-          },
-          priceFormatter: (price: number) => price.toFixed(isEquity ? 2 : precision) 
+      layout: {
+        background: { type: ColorType.Solid, color: '#1a1a1a' },
+        textColor: '#d1d4dc',
       },
-      timeScale: { 
-         timeVisible: true, secondsVisible: false, borderColor: '#27272a', rightOffset: isEquity ? 0 : 12, barSpacing: isEquity ? 2 : 6,
-         visible: !isEquity,
-         tickMarkFormatter: (time: number | any, tickMarkType: number) => {
-             let timestamp: number | undefined;
-             
-             if (typeof time === 'number') {
-                 timestamp = time;
-             } else if (time && typeof time === 'object') {
-                 const t = time as any;
-                 if (t?.year !== undefined && t?.month !== undefined && t?.day !== undefined) {
-                     timestamp = new Date(Date.UTC(t.year, t.month - 1, t.day)).getTime() / 1000;
-                 }
-             }
-
-             if (timestamp === undefined || !Number.isFinite(timestamp)) return "";
-             
-             const date = new Date(timestamp * 1000);
-             if (isNaN(date.getTime())) return "";
-             try {
-                 switch (tickMarkType) {
-                     case 0: return nyYearFormatter.format(date);
-                     case 1: return nyDateFormatter.format(date);
-                     case 2: return nyDateFormatter.format(date);
-                     case 3: return nyTimeFormatter.format(date);
-                     default: return nyTimeFormatter.format(date);
-                 }
-             } catch(e) { return ""; }
-         }
+      grid: {
+        vertLines: { color: '#2b2b2b' },
+        horzLines: { color: '#2b2b2b' },
       },
-      rightPriceScale: { borderColor: '#27272a', visible: true, autoScale: true, scaleMargins: { top: 0.2, bottom: 0.2 } },
-      crosshair: { 
-         mode: 0, 
-         vertLine: { color: '#06b6d4', width: 1, style: 2, labelBackgroundColor: '#06b6d4', visible: !isEquity }, 
-         horzLine: { color: '#06b6d4', width: 1, style: 2, labelBackgroundColor: '#06b6d4', visible: !isEquity } 
+      crosshair: {
+        mode: 1,
+        vertLine: { width: 1, color: '#758696', style: 2 },
+        horzLine: { width: 1, color: '#758696', style: 2 },
       },
-      handleScroll: !isEquity,
-      handleScale: !isEquity,
-      watermark: {
-          visible: isSimulation,
-          fontSize: 64,
-          horzAlign: 'center',
-          vertAlign: 'center',
-          color: 'rgba(255, 255, 255, 0.05)',
-          text: watermarkText,
+      rightPriceScale: {
+        borderColor: '#2b2b2b',
+        scaleMargins: { top: 0.3, bottom: 0.25 },
+        minBarSpacing: minMove,
+      },
+      timeScale: {
+        borderColor: '#2b2b2b',
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 10,
       },
     });
-
-    let series: any;
-    
-    // v5 COMPATIBILITY: Use addSeries(Type, options) instead of addTypeSeries()
-    if (type === 'AREA') {
-        const comparisonSeries = chart.addAreaSeries ({ 
-            lineColor: '#8b5cf6', 
-            topColor: 'rgba(139, 92, 246, 0.2)', 
-            bottomColor: 'rgba(139, 92, 246, 0.0)',
-            lineWidth: 2,
-            crosshairMarkerVisible: true
-        });
-        comparisonSeriesRef.current = comparisonSeries;
-
-        series = chart.addAreaSeries, ({ 
-            lineColor: '#06b6d4', 
-            topColor: 'rgba(6, 182, 212, 0.5)', 
-            bottomColor: 'rgba(6, 182, 212, 0.0)',
-            lineWidth: 2,
-            crosshairMarkerVisible: true
-        });
-    } else {
-        const killzoneSeries = chart.addHistogramSeries ({ priceScaleId: 'killzone', priceFormat: { type: 'volume' } });
-        chart.priceScale('killzone').applyOptions({ scaleMargins: { top: 0, bottom: 0 }, visible: false });
-        killzoneSeriesRef.current = killzoneSeries;
-        
-        series = chart.addCandlestickSeries ({ upColor: '#00ff9d', downColor: '#ff1e56', borderVisible: false, wickUpColor: '#00ff9d', wickDownColor: '#ff1e56', priceFormat: { type: 'price', precision: precision, minMove: minMove } });
-    }
 
     chartRef.current = chart;
+
+    const series = type === 'CANDLE' ? chart.addCandlestickSeries({
+      upColor: 'rgba(0, 255, 157, 1)',
+      downColor: 'rgba(255, 30, 86, 1)',
+      borderUpColor: 'rgba(0, 255, 157, 1)',
+      borderDownColor: 'rgba(255, 30, 86, 1)',
+      wickUpColor: 'rgba(0, 255, 157, 1)',
+      wickDownColor: 'rgba(255, 30, 86, 1)',
+      priceFormat: { type: 'price', precision: precision, minMove: minMove },
+    }) : chart.addAreaSeries({
+      topColor: 'rgba(0, 255, 157, 0.5)',
+      bottomColor: 'rgba(0, 255, 157, 0.1)',
+      lineColor: 'rgba(0, 255, 157, 1)',
+      lineWidth: 2,
+      priceFormat: { type: 'price', precision: precision, minMove: minMove },
+    });
+
     seriesRef.current = series;
 
-    // Apply markers immediately if they exist to prevent sync issues on initial render
-    if (markers.length > 0 && series.setMarkers) {
-        try {
-            series.setMarkers(markers);
-        } catch(e) {
-            console.warn("Initial markers set failed", e);
-        }
-    }
-
-    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-       if (!range || !onLoadMore) return;
-       if (range.from < 50 && !isFetchingRef.current) {
-           isFetchingRef.current = true;
-           if (data && data.length > 0) onLoadMore(data[0].time);
-       }
+    const killzoneSeries = chart.addHistogramSeries({
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+      scaleMargins: { top: 0.9, bottom: 0 },
+      lastValueVisible: false,
+      priceLineVisible: false,
     });
+    killzoneSeriesRef.current = killzoneSeries;
 
-    chart.subscribeCrosshairMove((param: MouseEventParams) => {
-        if (!shouldRender) return; 
-        if (param.time === lastHoverTimeRef.current && param.time !== undefined) return;
-        lastHoverTimeRef.current = param.time as number | null;
-        if (!param.time || param.point === undefined || !seriesRef.current) {
-            setTooltip(null);
-            if (data && data.length > 0) setOhlc(data[data.length - 1]);
-            return;
-        }
-        
-        const pointData = param.seriesData.get(seriesRef.current) as any;
-        if (pointData) setOhlc(pointData);
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.zIndex = '1';
+    chartContainerRef.current.appendChild(canvas);
+    canvasRef.current = canvas;
 
-        let timestamp: number | undefined;
-        
-        if (typeof param.time === 'number') {
-            timestamp = param.time;
-        } else if (param.time && typeof param.time === 'object') {
-             const t = param.time as any;
-             if (t?.year !== undefined && t?.month !== undefined && t?.day !== undefined) {
-                 timestamp = new Date(Date.UTC(t.year, t.month - 1, t.day)).getTime() / 1000;
-             }
-        }
-
-        if (timestamp === undefined) return;
-
-        const date = new Date(timestamp * 1000);
-        const dateStr = fullDateFormatter.format(date);
-        
-        if (type === 'CANDLE') {
-            const parts = nyHourFormatter.formatToParts(date);
-            const hourPart = parts.find(p => p.type === 'hour');
-            const nyHour = hourPart ? parseInt(hourPart.value, 10) : 0;
-            let foundZone = null;
-            for (const zone of KILLZONES) {
-                if (zone.start < zone.end) { if (nyHour >= zone.start && nyHour < zone.end) foundZone = zone; } 
-                else { if (nyHour >= zone.start || nyHour < zone.end) foundZone = zone; }
-            }
-            if (foundZone) setTooltip({ x: param.point.x, y: 60, text: foundZone.name, subtext: dateStr });
-            else setTooltip({ x: param.point.x, y: 60, text: "Date/Time", subtext: dateStr });
-        }
-    });
-
-    const resizeObserver = new ResizeObserver((entries) => {
-        if (!shouldRender) return;
-        window.requestAnimationFrame(() => {
-            if (!entries || entries.length === 0 || !chartContainerRef.current) return;
-            const { width, height } = entries[0].contentRect;
-            if (width && height) {
-                chart.applyOptions({ width, height });
-                if (canvasRef.current) {
-                   canvasRef.current.width = width;
-                   canvasRef.current.height = height;
-                }
-            }
-        });
-    });
-
-    if (chartContainerRef.current) resizeObserver.observe(chartContainerRef.current);
-    
-    // Cleanup function
-    return () => { 
-        resizeObserver.disconnect(); 
-        chart.remove(); 
-        // Nullify refs to prevent accessing dead objects
-        chartRef.current = null;
-        seriesRef.current = null;
-        comparisonSeriesRef.current = null;
-        killzoneSeriesRef.current = null;
-    };
-  }, [pair, type, isSimulation, watermarkText]);
-
-  useEffect(() => {
-    if (type !== 'CANDLE' || !chartRef.current || !seriesRef.current || !canvasRef.current) return;
-
-    let animationFrameId: number;
-
-    const renderLoop = () => {
-      if (shouldRender) {
-          drawOverlays();
+    const handleResize = () => {
+      if (chartContainerRef.current && chart) {
+        const width = chartContainerRef.current.clientWidth;
+        const height = chartContainerRef.current.clientHeight;
+        chart.applyOptions({ width, height });
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        drawOverlays();
       }
-      animationFrameId = requestAnimationFrame(renderLoop);
     };
 
-    renderLoop();
+    window.addEventListener('resize', handleResize);
+    handleResize();
 
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [type, shouldRender]);
+    const crosshairMoveHandler = (param: MouseEventParams) => {
+      if (!param.time || !param.point || !seriesRef.current) return;
+      lastHoverTimeRef.current = param.time as number;
 
+      const data = param.seriesData.get(seriesRef.current);
+      if (data) {
+        const candle = data as CandleData;
+        setOhlc(candle);
+      }
+
+      if (onMarkerClick) {
+        const marker = markers.find(m => m.time === param.time);
+        if (marker) {
+          setTooltip({
+            x: param.point.x,
+            y: param.point.y,
+            text: marker.text,
+            subtext: marker.title || ''
+          });
+        } else {
+          setTooltip(null);
+        }
+      } else {
+        setTooltip(null);
+      }
+    };
+
+    chart.subscribeCrosshairMove(crosshairMoveHandler);
+    chart.subscribeClick(crosshairMoveHandler);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      comparisonSeriesRef.current = null;
+      killzoneSeriesRef.current = null;
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      canvasRef.current = null;
+    };
+  }, [shouldRender, type, precision, minMove, markers, onMarkerClick]);
+
+  // --- DATA UPDATE EFFECT ---
   useEffect(() => {
-    if (!seriesRef.current || !chartRef.current) return;
-    if (!shouldRender && type === 'CANDLE') return;
+    if (!chartRef.current || !seriesRef.current || data.length === 0) return;
 
     if (prevPairRef.current !== pair) {
-       prevPairRef.current = pair;
-       prevDataCountRef.current = 0;
-       prevFirstCandleTimeRef.current = 0;
-       prevLastCandleTimeRef.current = 0;
-       isFetchingRef.current = false;
-       if (tradeLinesRef.current.size > 0) {
-           tradeLinesRef.current.clear(); 
-       }
+      seriesRef.current.setData(data as CandleData[]);
+      chartRef.current.timeScale().fitContent();
+      prevPairRef.current = pair;
+      prevDataCountRef.current = data.length;
+      prevFirstCandleTimeRef.current = data[0].time as number;
+      prevLastCandleTimeRef.current = data[data.length - 1].time as number;
+      return;
     }
 
-    if (!Array.isArray(data) || data.length === 0) {
-       seriesRef.current.setData([]);
-       if (killzoneSeriesRef.current) killzoneSeriesRef.current.setData([]);
-       prevDataCountRef.current = 0;
-    } else {
-        const uniqueData = new Map();
-        data.forEach(item => {
-            if (item.time !== undefined && item.time !== null) {
-                uniqueData.set(item.time, item);
-            }
-        });
-        const sortedData = Array.from(uniqueData.values()).sort((a, b) => a.time - b.time);
-        
-        const formattedData = (type === 'CANDLE' 
-           ? sortedData.map(d => ({ ...d, time: d.time as any }))
-           : sortedData.map(d => ({ time: d.time as any, value: (d as any).value })));
-        
-        const isPrepend = prevDataCountRef.current > 0 && sortedData.length > prevDataCountRef.current && sortedData[0].time < prevFirstCandleTimeRef.current;
-        const isFreshLoad = prevDataCountRef.current === 0;
-        const newLastTime = sortedData.length > 0 ? sortedData[sortedData.length - 1].time : 0;
-        const isTimeJump = prevLastCandleTimeRef.current > 0 && Math.abs(newLastTime - prevLastCandleTimeRef.current) > 3600; 
-
-        let rangeBefore: any = null;
-        if (isPrepend) rangeBefore = chartRef.current.timeScale().getVisibleLogicalRange();
-
-        seriesRef.current.setData(formattedData);
-        
-        if (isPrepend && rangeBefore) {
-            const addedCount = sortedData.length - prevDataCountRef.current;
-            chartRef.current.timeScale().setVisibleLogicalRange({ from: rangeBefore.from + addedCount, to: rangeBefore.to + addedCount });
-            isFetchingRef.current = false;
-        }
-
-        prevDataCountRef.current = sortedData.length;
-        prevFirstCandleTimeRef.current = sortedData.length > 0 ? sortedData[0].time : 0;
-        prevLastCandleTimeRef.current = newLastTime;
-
-        if (!lastHoverTimeRef.current && sortedData.length > 0) setOhlc(type === 'CANDLE' ? sortedData[sortedData.length - 1] : formattedData[formattedData.length - 1]);
-
-        if (!isPrepend && sortedData.length > 0) {
-           if (type === 'AREA') {
-              chartRef.current.timeScale().fitContent();
-           } else {
-              chartRef.current.priceScale('right').applyOptions({ autoScale: true });
-              if (isFreshLoad || isTimeJump) {
-                 chartRef.current.timeScale().scrollToRealTime();
-              }
-           }
-        }
-
-        if (type === 'CANDLE' && killzoneSeriesRef.current) {
-            const kzData = [];
-            for (let i = 0; i < sortedData.length; i++) {
-              const d = sortedData[i] as CandleData;
-              if (typeof d.time !== 'number') continue;
-              
-              const date = new Date(d.time * 1000);
-              if (isNaN(date.getTime())) continue;
-
-              const parts = nyHourFormatter.formatToParts(date);
-              const hourPart = parts.find(p => p.type === 'hour');
-              const nyHour = hourPart ? parseInt(hourPart.value, 10) : 0;
-              let color = 'transparent'; let value = 0;
-              for (const zone of KILLZONES) {
-                 if (zone.start < zone.end) { if (nyHour >= zone.start && nyHour < zone.end) { color = zone.color; value = 1; break; } } 
-                 else { if (nyHour >= zone.start || nyHour < zone.end) { color = zone.color; value = 1; break; } }
-              }
-              kzData.push({ time: d.time as any, value, color });
-            }
-            killzoneSeriesRef.current.setData(kzData);
-        }
+    const lastCandleTime = data[data.length - 1].time as number;
+    if (lastCandleTime > prevLastCandleTimeRef.current) {
+      seriesRef.current.update(data[data.length - 1] as CandleData);
+      prevLastCandleTimeRef.current = lastCandleTime;
     }
 
-    if (type === 'AREA' && comparisonSeriesRef.current) {
-        if (Array.isArray(comparisonData) && comparisonData.length > 0) {
-             const uniqueComp = new Map();
-             comparisonData.forEach(item => {
-                 if(item.time !== undefined) uniqueComp.set(item.time, item);
-             });
-             const sortedComp = Array.from(uniqueComp.values()).sort((a, b) => a.time - b.time);
-             const formattedComp = sortedComp.map(d => ({ time: d.time as any, value: d.value }));
-             comparisonSeriesRef.current.setData(formattedComp);
-        } else {
-             comparisonSeriesRef.current.setData([]);
-        }
+    if (data.length > prevDataCountRef.current) {
+      seriesRef.current.setData(data as CandleData[]);
+      prevDataCountRef.current = data.length;
     }
 
-  }, [data, comparisonData, pair, scanResult, type, shouldRender]); 
+    const firstCandleTime = data[0].time as number;
+    if (firstCandleTime < prevFirstCandleTimeRef.current) {
+      const newData = data.slice(0, data.length - prevDataCountRef.current);
+      newData.forEach(d => seriesRef.current.update(d as CandleData));
+      prevFirstCandleTimeRef.current = firstCandleTime;
+      prevDataCountRef.current = data.length;
+    }
 
+    drawOverlays();
+  }, [data, pair]);
+
+  // --- COMPARISON DATA EFFECT ---
   useEffect(() => {
-     if (isLoadingHistory === false) {
-        const timeout = setTimeout(() => { isFetchingRef.current = false; }, 500);
-        return () => clearTimeout(timeout);
-     }
-  }, [isLoadingHistory]);
+    if (!chartRef.current || !comparisonData) return;
+
+    if (!comparisonSeriesRef.current) {
+      const areaSeries = chartRef.current.addAreaSeries({
+        topColor: 'rgba(255, 99, 71, 0.5)',
+        bottomColor: 'rgba(255, 99, 71, 0.1)',
+        lineColor: 'rgba(255, 99, 71, 1)',
+        lineWidth: 2,
+      });
+      comparisonSeriesRef.current = areaSeries;
+    }
+
+    if (comparisonSeriesRef.current) {
+      comparisonSeriesRef.current.setData(comparisonData);
+    }
+  }, [comparisonData]);
+
+  // --- KILLZONES EFFECT ---
+  useEffect(() => {
+    if (!killzoneSeriesRef.current || !data.length) return;
+
+    const histogramData = data.map((candle) => {
+      const date = new Date(candle.time * 1000);
+      const hour = date.getUTCHours(); // Using UTC for consistency
+
+      let color = 'transparent';
+      KILLZONES.forEach(zone => {
+        if (hour >= zone.start && hour < zone.end) {
+          color = zone.color;
+        }
+      });
+
+      return {
+        time: candle.time,
+        value: 1, // Dummy value
+        color
+      };
+    });
+
+    killzoneSeriesRef.current.setData(histogramData);
+  }, [data]);
+
+  // --- ACTIVE TRADES EFFECT ---
+  useEffect(() => {
+    if (!seriesRef.current) return;
+
+    tradeLinesRef.current.forEach((lines, id) => {
+      seriesRef.current.removePriceLine(lines.entry);
+      seriesRef.current.removePriceLine(lines.sl);
+      seriesRef.current.removePriceLine(lines.tp);
+    });
+    tradeLinesRef.current.clear();
+
+    activeTrades.forEach(trade => {
+      const entryColor = trade.direction === 'buy' ? 'rgba(0, 255, 157, 0.8)' : 'rgba(255, 30, 86, 0.8)';
+      const slColor = 'rgba(255, 255, 255, 0.6)';
+      const tpColor = 'rgba(250, 204, 21, 0.6)';
+
+      const entry = seriesRef.current.createPriceLine({
+        price: trade.entry,
+        color: entryColor,
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: 'ENTRY',
+      });
+
+      const sl = seriesRef.current.createPriceLine({
+        price: trade.sl,
+        color: slColor,
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: 'SL',
+      });
+
+      const tp = seriesRef.current.createPriceLine({
+        price: trade.tp,
+        color: tpColor,
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: 'TP',
+      });
+
+      tradeLinesRef.current.set(trade.id, { entry, sl, tp });
+    });
+  }, [activeTrades]);
+
+  // --- FORCE SCROLL EFFECT ---
+  useEffect(() => {
+    if (forceScrollTrigger > 0 && chartRef.current) {
+      chartRef.current.timeScale().scrollToRealTime();
+    }
+  }, [forceScrollTrigger]);
+
+  // --- LOAD MORE HANDLER ---
+  const handleLoadMore = async () => {
+    if (!onLoadMore || isFetchingRef.current || data.length === 0) return;
+    isFetchingRef.current = true;
+    try {
+      await onLoadMore(data[0].time as number);
+    } finally {
+      isFetchingRef.current = false;
+    }
+  };
+
+  // --- SCROLL HANDLER FOR LOAD MORE ---
+  useEffect(() => {
+    if (!chartRef.current || !onLoadMore) return;
+
+    const timeScale = chartRef.current.timeScale();
+    const handler = () => {
+      const range = timeScale.getVisibleLogicalRange();
+      if (range && range.from < 10) {
+        handleLoadMore();
+      }
+    };
+
+    timeScale.subscribeVisibleLogicalRangeChange(handler);
+    return () => timeScale.unsubscribeVisibleLogicalRangeChange(handler);
+  }, [data, onLoadMore]);
 
   return (
-    <div ref={containerRef} className={`flex flex-col w-full h-full relative group ${type === 'AREA' ? '' : 'bg-black'}`}>
-        
-        <div className={`absolute inset-0 z-50 bg-white pointer-events-none transition-opacity duration-300 ${isFlashing ? 'opacity-30' : 'opacity-0'}`}></div>
+    <div ref={containerRef} className="relative w-full h-full">
+      <div 
+        ref={chartContainerRef} 
+        className={`w-full h-full ${isFlashing ? 'animate-flash' : ''}`} 
+      />
 
-        {showDateModal && (
-            <DateTimePickerModal 
-                onClose={() => setShowDateModal(false)}
-                onSelect={handleDateConfirm}
-                initialTime={data && data.length > 0 ? data[data.length - 1].time : undefined}
-            />
-        )}
-
-        {type === 'CANDLE' && (
-            <>
-                {/* INFO PANEL */}
-                <div className="absolute top-3 left-4 z-30 pointer-events-none flex flex-col gap-1 items-start">
-                    <div className="flex items-center gap-3 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-sm border border-white/5 shadow-lg">
-                        <span className="text-sm font-bold text-white tracking-widest font-mono">{pair}</span>
-                        <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm border border-primary/20">{timeframe}</span>
-                    </div>
-                    {ohlc && (
-                        <div className="flex items-center gap-3 text-[10px] font-mono tracking-tight text-zinc-400 bg-black/50 backdrop-blur-sm p-1.5 rounded-sm border border-white/5 shadow-lg mt-1">
-                            <div className="flex gap-1"><span className="text-zinc-600">O</span><span className={ohlc.close >= ohlc.open ? 'text-bullish' : 'text-bearish'}>{ohlc.open.toFixed(precision)}</span></div>
-                            <div className="flex gap-1"><span className="text-zinc-600">H</span><span className={ohlc.close >= ohlc.open ? 'text-bullish' : 'text-bearish'}>{ohlc.high.toFixed(precision)}</span></div>
-                            <div className="flex gap-1"><span className="text-zinc-600">L</span><span className={ohlc.close >= ohlc.open ? 'text-bullish' : 'text-bearish'}>{ohlc.low.toFixed(precision)}</span></div>
-                            <div className="flex gap-1"><span className="text-zinc-600">C</span><span className={ohlc.close >= ohlc.open ? 'text-bullish' : 'text-bearish'}>{ohlc.close.toFixed(precision)}</span></div>
-                        </div>
-                    )}
-                </div>
-                
-                {/* CUSTOM DATE PICKER POSITION: BOTTOM-LEFT (Below OHLC legend) */}
-                {onDateJump && datePickerPosition === 'bottom-left' && (
-                    <div className="absolute top-24 left-4 z-40 flex items-center gap-2"> {/* Increased Z-Index */}
-                        <button 
-                           onClick={() => setShowDateModal(true)}
-                           className="flex items-center gap-2 px-3 py-1.5 bg-black/50 backdrop-blur-sm hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm border border-white/5 shadow-lg transition-all text-[9px] font-bold uppercase tracking-wider cursor-pointer pointer-events-auto"
-                           title="Temporal Jump"
-                        >
-                             <Calendar size={12} /> Jump to Date
-                        </button>
-                    </div>
-                )}
-                
-                {isLoadingHistory && (
-                <div className="absolute top-1/2 left-4 z-30 flex items-center gap-2 bg-black/80 backdrop-blur-sm px-3 py-1.5 rounded-sm border border-primary/20 animate-in fade-in slide-in-from-left-2">
-                    <Loader2 size={12} className="text-primary animate-spin" />
-                    <span className="text-[9px] font-mono text-primary">FETCHING_HISTORY</span>
-                </div>
-                )}
-
-                {/* HUD CONTROLS (TOP RIGHT) */}
-                <div className="absolute top-3 right-4 flex items-center gap-2 z-30 bg-black/40 backdrop-blur-sm p-1 rounded-sm border border-white/5 shadow-lg">
-                    {onDateJump && datePickerPosition === 'top-right' && (
-                        <button 
-                           onClick={() => setShowDateModal(true)}
-                           className="relative w-7 h-7 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm transition-all"
-                           title="Temporal Jump"
-                        >
-                             <Calendar size={14} />
-                        </button>
-                    )}
-                    
-                    {onSnapshot && (
-                        <button 
-                           onClick={() => handleTakeSnapshot(false)}
-                           title="Vision Snapshot"
-                           className="w-7 h-7 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm transition-all active:text-primary active:scale-95"
-                        >
-                           <Camera size={14} />
-                        </button>
-                    )}
-
-                    <button 
-                        onClick={() => { if(chartRef.current) chartRef.current.timeScale().fitContent(); }} 
-                        className="w-7 h-7 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm transition-all"
-                        title="Fit Content"
-                    >
-                        <Maximize size={14} />
-                    </button>
-                    
-                    {onLiveReset && (
-                        <button 
-                            onClick={() => { 
-                                if(onLiveReset) onLiveReset(); 
-                                if(chartRef.current) chartRef.current.timeScale().scrollToRealTime(); 
-                            }} 
-                            className="w-7 h-7 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm transition-all"
-                            title="Back to Live"
-                        >
-                            <RotateCcw size={14} />
-                        </button>
-                    )}
-                </div>
-
-                <div className="absolute bottom-4 left-4 z-20 pointer-events-none hidden md:block">
-                    <div className="bg-black/60 backdrop-blur-md border border-white/10 py-1 px-3 rounded-sm shadow-glow-sm flex items-center gap-3">
-                        {KILLZONES.map((zone) => (
-                            <div key={zone.name} className="flex items-center gap-1.5 shrink-0">
-                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: zone.legendColor }}></div>
-                                <span className="text-[8px] font-mono text-zinc-300">{zone.name}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </>
-        )}
-
-        {tooltip && type === 'CANDLE' && (
-            <div className="absolute z-30 pointer-events-none transform -translate-x-1/2 flex flex-col items-center transition-all duration-75" style={{ left: tooltip.x, top: tooltip.y }}>
-                <div className="bg-[#050505]/95 backdrop-blur-xl border border-primary/30 text-zinc-200 px-3 py-1.5 rounded-sm shadow-glow flex flex-col items-center ring-1 ring-black">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-primary mb-0.5">{tooltip.text}</span>
-                    <span className="text-[9px] font-mono text-zinc-400 whitespace-nowrap">{tooltip.subtext}</span>
-                </div>
-                <div className="w-[1px] h-4 bg-gradient-to-b from-primary/50 to-transparent"></div>
-            </div>
-        )}
-        
-        <div className="flex-1 w-full relative">
-           <div ref={chartContainerRef} className="w-full h-full relative z-10" />
-           <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
+      {isSimulation && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-zinc-500/50 text-4xl font-bold select-none pointer-events-none rotate-[-30deg]">
+          {watermarkText}
         </div>
+      )}
+
+      {showDateModal && onDateJump && (
+        <DateTimePickerModal
+          isOpen={showDateModal}
+          onClose={() => setShowDateModal(false)}
+          onSelect={handleDateConfirm}
+          initialTime={data.length > 0 ? data[data.length - 1].time : Date.now() / 1000}
+        />
+      )}
+
+      {type === 'CANDLE' && (
+        <>
+          {/* OHL C PANEL */}
+          <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-1 text-xs text-white border border-white/10">
+            <div>{pair} {timeframe}</div>
+            {ohlc && (
+              <>
+                <div>O: {ohlc.open.toFixed(precision)}</div>
+                <div>H: {ohlc.high.toFixed(precision)}</div>
+                <div>L: {ohlc.low.toFixed(precision)}</div>
+                <div>C: {ohlc.close.toFixed(precision)}</div>
+              </>
+            )}
+          </div>
+
+          {/* DATE PICKER BUTTON */}
+          {onDateJump && datePickerPosition === 'bottom-left' && (
+            <button
+              onClick={() => setShowDateModal(true)}
+              className="absolute bottom-2 left-2 flex items-center gap-2 px-3 py-1.5 bg-black/50 backdrop-blur-sm hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm border border-white/5 shadow-lg transition-all text-[9px] font-bold uppercase tracking-wider"
+              title="Temporal Jump"
+            >
+              <Calendar size={12} />
+              Jump to Date
+            </button>
+          )}
+
+          {/* LOADING INDICATOR */}
+          {isLoadingHistory && (
+            <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-1 text-xs text-white border border-white/10 flex items-center gap-1">
+              <Loader2 size={12} className="animate-spin" />
+              FETCHING HISTORY
+            </div>
+          )}
+
+          {/* HUD CONTROLS */}
+          <div className="absolute top-2 right-2 flex flex-col gap-1">
+            {onDateJump && datePickerPosition === 'top-right' && (
+              <button
+                onClick={() => setShowDateModal(true)}
+                className="w-7 h-7 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm transition-all"
+                title="Temporal Jump"
+              >
+                <Calendar size={14} />
+              </button>
+            )}
+
+            <button
+              onClick={() => handleTakeSnapshot()}
+              className="w-7 h-7 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm transition-all"
+              title="Vision Snapshot"
+            >
+              <Camera size={14} />
+            </button>
+
+            <button
+              onClick={() => chartRef.current?.timeScale().fitContent()}
+              className="w-7 h-7 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm transition-all"
+              title="Fit Content"
+            >
+              <Maximize size={14} />
+            </button>
+
+            {onLiveReset && (
+              <button
+                onClick={onLiveReset}
+                className="w-7 h-7 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white rounded-sm transition-all"
+                title="Back to Live"
+              >
+                <RotateCcw size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* KILLZONE LEGEND */}
+          <div className="absolute bottom-2 right-2 flex gap-2">
+            {KILLZONES.map(zone => (
+              <div key={zone.name} className="flex items-center gap-1 text-xs text-zinc-400">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: zone.legendColor }} />
+                {zone.label}
+              </div>
+            ))}
+          </div>
+
+          {/* TOOLTIP */}
+          {tooltip && (
+            <div 
+              className="absolute bg-black/80 text-white text-xs rounded px-2 py-1 pointer-events-none z-50"
+              style={{ left: tooltip.x + 10, top: tooltip.y - 20 }}
+            >
+              {tooltip.text}
+              <div className="text-zinc-400">{tooltip.subtext}</div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
