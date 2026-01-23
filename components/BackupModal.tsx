@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Cloud, HardDrive, Check, X, ShieldCheck, Share2 } from 'lucide-react';
+import { CloudUpload, HardDrive, Check, X, ShieldCheck, Share2 } from 'lucide-react';
 
 interface BackupModalProps {
     onClose: () => void;
